@@ -15,7 +15,6 @@
 #include "sdmmc_cmd.h"
 #include "sd_changer.h"
 #include "driver/sdmmc_host.h"
-#include "sd_changer.h"
 
 #define EXAMPLE_MAX_CHAR_SIZE 64
 
@@ -98,18 +97,15 @@ void app_main(void)
     // This initializes the slot without card detect (CD) and write protect (WP) signals.
     // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-
-    sdchngr_dev_t device = SDCHNGR_DEFAULT();
-    sdchngr_handle_t changer = (sdchngr_handle_t)&device;
-    sdchngr_init(changer);
-    uint8_t nDetected = 0;
-    uint8_t detected = 0;
-    sdchngr_get_detected(changer, &nDetected, &detected);
-    ESP_LOGI(TAG, "Detected num %d mask %02x", nDetected, detected);
-
+    
+    // Initialize SD Changer
+    sdchngr_handle_t changer = sdchngr_create();
+    
+    // Try to mount SD card in each SD slot
     for (size_t i = 0; i < 8; i++)
     {
         ESP_LOGI(TAG, "[SLOT %d]", i);
+        // Power up slot and attach it to bus
         ret = sdchngr_set_power(changer, i, true);
         ret = sdchngr_set_selected(changer, i, &slot_config);
         if (ret != ESP_OK)
@@ -218,4 +214,20 @@ void app_main(void)
         esp_vfs_fat_sdcard_unmount(mount_point, card);
         ESP_LOGI(TAG, "Card unmounted");
     }
+
+    // Finish up by getting powered and detected card status
+    uint8_t nDetected = 0;
+    uint8_t bDetected = 0;
+    ESP_ERROR_CHECK(sdchngr_get_detected(changer, &nDetected, &bDetected));
+    ESP_LOGI(TAG, "Detected count %d mask %02x", nDetected, bDetected);
+
+    uint8_t nPowered = 0;
+    uint8_t bPowered = 0;
+    ESP_ERROR_CHECK(sdchngr_get_powered(changer, &nPowered, &bPowered));
+    ESP_LOGI(TAG, "Powered count %d mask %02x", nPowered, bPowered);
+
+    uint8_t selectedSlot = 0;
+    ESP_ERROR_CHECK(sdchngr_get_selected(changer, &selectedSlot));
+    ESP_LOGI(TAG, "Last selected slot %d", selectedSlot);
+
 }

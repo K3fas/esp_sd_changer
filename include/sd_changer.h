@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdint.h>
-#include "esp_vfs_fat.h"
 #include "driver/sdmmc_host.h"
 #include "driver/gpio.h"
 // GPIO Expander
@@ -79,25 +78,25 @@ extern "C"
     typedef sdchngr_dev_t* sdchngr_handle_t;
 
     /**
-     * @brief Initialize SD Changer handle
-     * Initializes sdmmc_host and i2c handle
+     * @brief Creates and initialize SD Changer handle
+     * Initializes changer structure and i2c handles 
      * @return
-     *      - ESP_OK on success
-     *
+     *      - SD Changer handle on success
+     *      - null if error occured
      */
-    esp_err_t sdchngr_init(sdchngr_handle_t handle);
+    sdchngr_handle_t sdchngr_create();
 
     /**
      * @brief Select SD card to be connected to the sdmmc host
      *
      * SD must be detected by handle to be selected
      * @param handle [IN] sdchanger config struct
-     * @param slot [IN] SD card slot [1-8], 0 for none selected
+     * @param slot [IN] SD card slot [0-7]
      * @param slot_config [OUT] sdmmc slot config
      * @return
      *      - ESP_OK on success
      *      - ESP_ERR_NOT_FOUND if SD card is not detected
-     *      - ESP_ERR_INVALID_ARG if slot is not supported
+     *      - ESP_ERR_INVALID_ARG if handle is null or if slot > SD_SLOT_COUNT
      */
     esp_err_t sdchngr_set_selected(sdchngr_handle_t handle, uint8_t slot, sdmmc_slot_config_t *slot_config);
 
@@ -105,73 +104,111 @@ extern "C"
      * @brief Turn SD card on/off
      * SD must be detected by handle to be powered
      *
-     * @param handle resulting configuration
-     * @param slot SD card slot [0-7]
-     * @param power 0-OFF 1-ON
+     * @param handle [IN] configuration
+     * @param slot [IN] SD card slot [0-7]
+     * @param power [IN] 0-OFF 1-ON
      * @return
      *      - ESP_OK on success
      *      - ESP_ERR_NOT_FOUND if SD card is not detected
+     *      - ESP_ERR_INVALID_ARG if handle is null or if slot > SD_SLOT_COUNT
      */
     esp_err_t sdchngr_set_power(sdchngr_handle_t handle, uint8_t slot, uint8_t power);
 
     /**
-     * @brief Get number of selected slot
+     * @brief Gets number of selected slot
      *
-     * @param handle configuration
-     * @return [1-8] selected slot, 0 for none
+     * @param handle [IN] configuration
+     * @param slot [OUT] number of selected slot
+     * @return
+     *      - ESP_OK on success
+     *      - ESP_ERR_NOT_FOUND if SD card is not detected
+     *      - ESP_ERR_INVALID_ARG if handle is null or if slot > SD_SLOT_COUNT
      */
-    uint8_t sdchngr_get_selected(sdchngr_handle_t handle);
+    esp_err_t sdchngr_get_selected(sdchngr_handle_t handle, uint8_t* slot);
 
     /**
      * @brief Get bitmask of detected cards
      *
-     * @param handle configuration
-     * @param nDetected number of detected cards
-     * @param slots bitmask of slots with detected cards
+     * @param handle [IN] configuration
+     * @param nDetected [OUT] number of detected cards
+     * @param slots [OUT] bitmask of slots with detected cards
      * @return
      *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if input params are null
      */
     esp_err_t sdchngr_get_detected(sdchngr_handle_t handle, uint8_t *nDetected, uint8_t *slots);
 
     /**
      * @brief Get bitmask of powered cards
      *
-     * @param handle configuration
-     * @param nPowered number of powered cards
-     * @param slots bitmask of slots with powered cards
+     * @param handle [IN] configuration
+     * @param nPowered [OUT] number of powered cards
+     * @param slots [IN] bitmask of slots with powered cards
      * @return
      *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if input params are null
      */
     esp_err_t sdchngr_get_powered(sdchngr_handle_t handle, uint8_t *nPowered, uint8_t *slots);
 
     /**
      * @brief
      *
-     * @param handle configuration
-     * @param slot sd card slot
-     * @return 1 if slot is selected
+     * @param handle [IN] configuration
+     * @param slot [IN] sd card slot
+     * @param selected [OUT] selected state (0-OFF, 1-SELECTED)
+     * @return
+     *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if input params are null
      */
-    uint8_t sdchngr_is_selected(sdchngr_handle_t handle, uint8_t slot);
+    esp_err_t sdchngr_is_selected(sdchngr_handle_t handle, uint8_t slot, uint8_t* selected);
 
     /**
      * @brief
      *
-     * @param handle configuration
-     * @param slot sd card slot
-     * @return 1 if card is powered
+     * @param handle [IN] configuration
+     * @param slot [IN] sd card slot
+     * @param selected [OUT] power state (0-OFF, 1-ON)
+     * @return
+     *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if input params are null
      */
-    uint8_t sdchngr_is_powered(sdchngr_handle_t handle, uint8_t slot);
+    esp_err_t sdchngr_is_powered(sdchngr_handle_t handle, uint8_t slot, uint8_t* powered);
 
     /**
      * @brief
      *
-     * @param handle configuration
-     * @param slot sd card slot
-     * @return 1 if card is detected
+     * @param handle [IN] configuration
+     * @param slot [IN] sd card slot
+     * @param detected [OUT] detected state (0-OFF, 1-DETECTED)
+     * @return
+     *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if input params are null
      */
-    uint8_t sdchngr_is_detected(sdchngr_handle_t handle, uint8_t slot);
-
+    esp_err_t sdchngr_is_detected(sdchngr_handle_t handle, uint8_t slot, uint8_t* detected);
+    
+    /**
+     * @brief Function to get correct sdmmc slot config based on slot number
+     * 
+     * @param handle [IN] configuration
+     * @param slot [IN] slot number
+     * @param slot_config [OUT] sdmmc slot configuration for SD card slot
+     * 
+     * @return
+     *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if handle or config is null  
+     */
     esp_err_t sdchngr_set_port(sdchngr_handle_t handle, uint8_t slot, sdmmc_slot_config_t *slot_config);
+    
+    /**
+     * @brief Function to set current mcp in handle based on slot number
+     * 
+     * @param handle [IN] configuration
+     * @param slot [IN] slot number
+     * 
+     * @return
+     *      - ESP_OK on success
+     *      - ESP_ERR_INVALID_ARG if handle is null
+     */
     esp_err_t sdchngr_set_mcp(sdchngr_handle_t handle, uint8_t slot);
 
 #ifdef __cplusplus

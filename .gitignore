@@ -1,6 +1,6 @@
 build/**
-managed_components/**
-kicad/**
+example/build**
+**/managed_components/**
 .vscode/**
 sdkconfig*
 dependencies.lock
