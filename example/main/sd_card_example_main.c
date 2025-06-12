@@ -70,11 +70,7 @@ void app_main(void)
     // If format_if_mount_failed is set to true, SD card will be partitioned and
     // formatted in case when mounting fails.
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-#ifdef CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED
-        .format_if_mount_failed = true,
-#else
         .format_if_mount_failed = false,
-#endif // EXAMPLE_FORMAT_IF_MOUNT_FAILED
         .max_files = 5,
         .allocation_unit_size = 16 * 1024};
     sdmmc_card_t *card;
@@ -173,26 +169,6 @@ void app_main(void)
         {
             continue;
         }
-
-        // Format FATFS
-#ifdef CONFIG_EXAMPLE_FORMAT_SD_CARD
-        ret = esp_vfs_fat_sdcard_format(mount_point, card);
-        if (ret != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to format FATFS (%s)", esp_err_to_name(ret));
-            return;
-        }
-
-        if (stat(file_foo, &st) == 0)
-        {
-            ESP_LOGI(TAG, "file still exists");
-            return;
-        }
-        else
-        {
-            ESP_LOGI(TAG, "file doesnt exist, format done");
-        }
-#endif // CONFIG_EXAMPLE_FORMAT_SD_CARD
 
         const char *file_nihao = MOUNT_POINT "/nihao.txt";
         memset(data, 0, EXAMPLE_MAX_CHAR_SIZE);

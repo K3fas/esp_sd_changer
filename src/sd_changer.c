@@ -39,7 +39,11 @@ sdchngr_handle_t sdchngr_create()
 {
     ESP_LOGI(TAG, "Initializing SD changer\n");
 
-    sdchngr_dev_t *handle = (sdchngr_dev_t *)calloc(1, sizeof(sdchngr_dev_t));
+    sdchngr_dev_t *handle = (sdchngr_dev_t *)malloc(sizeof(sdchngr_dev_t));
+    if (handle != NULL) {
+        *handle = (sdchngr_dev_t)SDCHNGR_DEFAULT();  // Struct copy
+    }
+    
 
     // Init I2C peripherals
     i2c_config_t conf_i2c = {
@@ -158,6 +162,7 @@ esp_err_t sdchngr_get_detected(sdchngr_handle_t handle, uint8_t *nDetected, uint
     *slots = 0;
     // Combine 4 bits from both ports so the result is
     // 0b[BBBBAAAA]
+    porta = porta & 0x0F; // Use only bits 0–3
     *slots = (portb << 4) | porta;
     *slots = ~(*slots); // Negate so that 1 represents detected card
     for (int i = 0; i < 8; ++i)
